@@ -1,6 +1,10 @@
 from .core import FrameBuilder
 from .preprocessing import prepare
 
+__author__ = "Sebastian Linke"
+__version__ = "0.1-dev"
+__license__ = "MIT License"
+
 __all__ = ["columnize", "cprint"]
 
 def columnize(
