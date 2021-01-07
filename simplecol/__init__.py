@@ -1,4 +1,4 @@
-# Copyright (c) 2020 Sebastian Linke
+# Copyright (c) 2020, 2021 Sebastian Linke
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -58,7 +58,7 @@ def columnize(
     :pattern:   If not `None`, it defines the filter criteria for the
                 values to be used.  Can be a string with shell-style
                 wildcards (i.e. "*" and "?") or a precompiled regular
-                expression (then wildcards have no special meaning).  
+                expression (then wildcards have no special meaning).
 
     :unique:    If `True`, the first occurrence of a value will be
                 columnized, but any other occurrences are ignored.
