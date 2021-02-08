@@ -22,16 +22,16 @@ from collections.abc import Mapping
 from fnmatch import translate
 from io import IOBase
 from locale import strxfrm
+from pathlib import Path
 import re
 
 __all__ = [
-    "prepare", "read_lines", "get_column",
-    "get_filtered", "get_unique", "get_sorted"
+    "prepare", "extract", "get_filenames", "read_lines",
+    "get_column", "get_filtered", "get_unique", "get_sorted"
 ]
 
 def prepare(values, colidx=None, pattern=None, unique=False, sort=False):
-    if isinstance(values, IOBase):
-        values = read_lines(values)
+    values = extract(values)
     if colidx is not None:
         values = get_column(values, colidx)
     if pattern is not None:
@@ -42,8 +42,25 @@ def prepare(values, colidx=None, pattern=None, unique=False, sort=False):
         values = get_sorted(values)
     return values
 
-def read_lines(stream):
-    return [line.rstrip() for line in stream]
+def extract(source):
+    if isinstance(source, Path):
+        return get_filenames(source)
+    if isinstance(source, IOBase):
+        return read_lines(source)
+    return source
+
+def get_filenames(path):
+    if not path.is_dir():
+        return [path]
+    return list(path.iterdir())
+
+def read_lines(stream, skip_empty=True, skip_comments=True):
+    lines = (line.rstrip() for line in stream)
+    if skip_empty:
+        lines = (line for line in lines if line)
+    if skip_comments:
+        lines = (line for line in lines if not line.startswith("#"))
+    return list(lines)
 
 def get_column(lines, index):
     return [line.split()[index] for line in lines]
