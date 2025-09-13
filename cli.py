@@ -168,20 +168,30 @@ def run(parser: CLIParser) -> int:
             rows = _read_rows_from_csv_files(args.files, args.delimiter)
             
             # Handle headers in row mode
-            token = parser.parse_alignment_token(args.align)
-            token_to_alignment = {
-                "LEFT": Alignment.LEFT,
-                "RIGHT": Alignment.RIGHT,
-                "CENTER": Alignment.CENTER,
-                "AUTO": None,  # None means auto-detect
-            }
+            if "," in args.align:
+                # Multiple alignments specified
+                base_align = None  # Will be set per column
+            else:
+                token = parser.parse_alignment_token(args.align)
+                token_to_alignment = {
+                    "LEFT": Alignment.LEFT,
+                    "RIGHT": Alignment.RIGHT,
+                    "CENTER": Alignment.CENTER,
+                    "AUTO": None,  # None means auto-detect
+                }
+                base_align = token_to_alignment[token]
             
-            base_align = token_to_alignment[token]
             model = Model.from_rows(rows, headers=args.header, align=base_align)
 
             if "," in args.align:
                 ncols = len(model.columns)
                 per_col_tokens = parser.parse_alignments(args.align, ncols)
+                token_to_alignment = {
+                    "LEFT": Alignment.LEFT,
+                    "RIGHT": Alignment.RIGHT,
+                    "CENTER": Alignment.CENTER,
+                    "AUTO": None,  # None means auto-detect
+                }
                 alignment_list = [token_to_alignment[token] for token in per_col_tokens]
                 model = model.with_aligns(alignment_list)
                 

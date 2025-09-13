@@ -82,16 +82,18 @@ def detect_auto_align(items: Iterable[Any]) -> str:
     if numeric_count > total_count / 2:
         return "RIGHT"
     
-    # Check if all items have similar length (for center alignment)
+    # For center alignment, we need VERY specific conditions:
+    # - NO numeric values at all
+    # - All items must be exactly the same length
+    # - Length should be between 3-8 characters (reasonable for centering)
+    # - Must have at least 3 items
     lengths = [len(item) for item in str_items]
-    if lengths:
-        avg_length = sum(lengths) / len(lengths)
-        # If most items are within 20% of average length, consider center alignment
-        similar_length_count = sum(1 for length in lengths 
-                                 if abs(length - avg_length) <= avg_length * 0.2)
-        
-        if similar_length_count > total_count * 0.8 and avg_length > 3:
-            return "CENTER"
+    if (lengths and 
+        total_count >= 3 and
+        numeric_count == 0 and
+        len(set(lengths)) == 1 and  # All exactly the same length
+        3 <= lengths[0] <= 8):  # Reasonable length for centering
+        return "CENTER"
     
     # Default to left alignment
     return "LEFT"

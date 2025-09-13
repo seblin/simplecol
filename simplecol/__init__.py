@@ -133,7 +133,10 @@ def cprint(values, **options):
 
 
 def _read_columns_from_text_files(files: Sequence[str], delimiter: str = ",") -> list[list[str]]:
-    """Read columns from text files for CLI."""
+    """Read columns from text files for CLI.
+    
+    Each line represents a column definition: header,value1,value2,...
+    """
     if not files:
         files = ["-"]  # stdin
     
@@ -145,17 +148,10 @@ def _read_columns_from_text_files(files: Sequence[str], delimiter: str = ",") ->
             stream = open(filename, 'r')
         
         try:
-            for line in stream:
-                line = line.rstrip('\n\r')
-                if line:
-                    # Split by delimiter and treat each part as a separate column
-                    parts = line.split(delimiter)
-                    # Extend columns list as needed
-                    while len(columns) < len(parts):
-                        columns.append([])
-                    # Add parts to respective columns
-                    for i, part in enumerate(parts):
-                        columns[i].append(part.strip())
+            reader = csv.reader(stream, delimiter=delimiter)
+            for row in reader:
+                if row:  # Skip empty rows
+                    columns.append(row)
         finally:
             if filename != "-":
                 stream.close()

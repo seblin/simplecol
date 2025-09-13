@@ -116,8 +116,14 @@ class Model:
             headings = list(rows_list[0])
             rows_list = rows_list[1:]
         
+        # If no data rows remain after header extraction, create empty columns
         if not rows_list:
-            return cls(data=[], headings=headings, align=align)
+            if headings:
+                # Create empty columns for each heading
+                empty_columns = [[] for _ in headings]
+                return cls(data=empty_columns, headings=headings, align=align)
+            else:
+                return cls(data=[], headings=headings, align=align)
         
         # Transpose rows to columns
         max_cols = max(len(row) for row in rows_list)
