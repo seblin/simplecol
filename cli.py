@@ -58,7 +58,17 @@ class CLIParser(argparse.ArgumentParser):
             default="left",
             help=("Alignment for columns. Single value applied to all "
                   "columns or comma-separated per-column values. Allowed "
-                  "values: left, right, center or <, >, ^."),
+                  "values: left, right, center, auto or <, >, ^."),
+        )
+        self.add_argument(
+            "--header",
+            action="store_true",
+            help="Treat first row/column element as header.",
+        )
+        self.add_argument(
+            "--no-sep",
+            action="store_true",
+            help="Don't show separator line below headers.",
         )
         self.add_argument(
             "--demo",
@@ -80,6 +90,8 @@ class CLIParser(argparse.ArgumentParser):
             return "RIGHT"
         if t in ("center", "c", "centre", "^"):
             return "CENTER"
+        if t in ("auto", "a"):
+            return "AUTO"
         raise argparse.ArgumentTypeError(f"unknown alignment: {token!r}")
 
     def parse_alignments(self, arg: str, ncols: int):
@@ -111,6 +123,7 @@ def run(parser: CLIParser) -> int:
         Column,
         Model,
         Screen,
+        Table,
         _read_columns_from_text_files,
         _read_rows_from_csv_files,
         _run_demo,
@@ -126,53 +139,78 @@ def run(parser: CLIParser) -> int:
         if args.columns:
             raw_cols = _read_columns_from_text_files(args.files,
                                                      args.delimiter)
-            model = Model([list(col) for col in raw_cols],
-                          align=Alignment.LEFT)
+            
+            # Handle headers in columns mode
+            if args.header and raw_cols:
+                headings = []
+                for col in raw_cols:
+                    if col:
+                        headings.append(col[0])  # First element as heading
+                        col[:] = col[1:]  # Remove first element from data
+                    else:
+                        headings.append("")
+            else:
+                headings = None
+            
+            model = Model.from_columns(raw_cols, headings=headings, align=Alignment.LEFT)
+            
             aligns = parser.parse_alignments(args.align, len(raw_cols))
             # map token strings back to Alignment values
             token_to_alignment = {
                 "LEFT": Alignment.LEFT,
                 "RIGHT": Alignment.RIGHT,
                 "CENTER": Alignment.CENTER,
+                "AUTO": None,  # None means auto-detect per column
             }
-            model = Model(
-                [
-                    Column(col, align=token_to_alignment[aligns[i]])
-                    if not isinstance(col, Column) else col
-                    for i, col in enumerate(model.data)
-                ],
-                align=Alignment.LEFT,
-            )
+            alignment_list = [token_to_alignment[token] for token in aligns]
+            model = model.with_aligns(alignment_list)
         else:
             rows = _read_rows_from_csv_files(args.files, args.delimiter)
-            # parser.parse_alignment_token returns a token string; map it
-            token = parser.parse_alignment_token(args.align)
-            token_to_alignment = {
-                "LEFT": Alignment.LEFT,
-                "RIGHT": Alignment.RIGHT,
-                "CENTER": Alignment.CENTER,
-            }
-            model = Model.from_rows(rows,
-                                    align=token_to_alignment[token])
+            
+            # Handle headers in row mode
+            if "," in args.align:
+                # Multiple alignments specified
+                base_align = None  # Will be set per column
+            else:
+                token = parser.parse_alignment_token(args.align)
+                token_to_alignment = {
+                    "LEFT": Alignment.LEFT,
+                    "RIGHT": Alignment.RIGHT,
+                    "CENTER": Alignment.CENTER,
+                    "AUTO": None,  # None means auto-detect
+                }
+                base_align = token_to_alignment[token]
+            
+            model = Model.from_rows(rows, headers=args.header, align=base_align)
 
             if "," in args.align:
-                ncols = len(list(model.data))
+                ncols = len(model.columns)
                 per_col_tokens = parser.parse_alignments(args.align, ncols)
-                model = Model(
-                    [
-                        Column(col, align=token_to_alignment[
-                            per_col_tokens[i]
-                        ]) if not isinstance(col, Column) else col
-                        for i, col in enumerate(model.data)
-                    ],
-                    align=token_to_alignment[
-                        parser.parse_alignment_token(args.align.split(",")[0])
-                    ],
-                )
+                token_to_alignment = {
+                    "LEFT": Alignment.LEFT,
+                    "RIGHT": Alignment.RIGHT,
+                    "CENTER": Alignment.CENTER,
+                    "AUTO": None,  # None means auto-detect
+                }
+                alignment_list = [token_to_alignment[token] for token in per_col_tokens]
+                model = model.with_aligns(alignment_list)
+                
     except Exception as exc:
         print(f"Error reading input: {exc}", file=sys.stderr)
         return 2
 
-    screen = Screen(model, spacer=args.spacer)
-    print(screen)
+    # Use Table renderer when headers are present, otherwise Screen
+    has_headers = any(col.heading for col in model.columns)
+    if has_headers:
+        renderer = Table(model, spacer=args.spacer, show_sep=not args.no_sep)
+    else:
+        renderer = Screen(model, spacer=args.spacer)
+    
+    print(renderer)
     return 0
+
+
+if __name__ == "__main__":
+    import sys
+    parser = CLIParser()
+    sys.exit(run(parser))
