@@ -38,7 +38,7 @@ class CLIParser(ArgumentParser):
         self.add_argument(
             "--aligns", "-a", default="left",
             help=("Alignment for all columns. Can be a single value or a "
-                  "comma-seperated list to change the alignment for succeeding "
+                  "comma-separated list to change the alignment for succeeding "
                   "columns. Allowed values: left, right, center or <, >, ^."),
         )
 
