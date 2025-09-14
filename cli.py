@@ -71,4 +71,4 @@ def main():
     try:
         print(CLIParser().get_screen())
     except Exception as exc:
-        print("ERROR: {exc}", file=sys.stderr)
+        print(f"ERROR: {exc}", file=sys.stderr)
