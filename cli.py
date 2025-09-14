@@ -63,7 +63,7 @@ class CLIParser(ArgumentParser):
         args = self.parse_args()
         aligns = self.parse_alignment_tokens(args.aligns)
         build_model = Model.from_csv if args.csv else Model.from_stream
-        model = build_model(args.infile, args.delimiter).with_aligns(list(aligns))
+        model = build_model(args.infile, args.delimiter).with_aligns(aligns)
         return Screen(model, args.spacer)
 
 
